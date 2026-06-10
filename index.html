@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UrusDuit - Premium Expense Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .status-hijau { background: linear-gradient(135deg, #10B981, #059669); }
+    .status-kuning { background: linear-gradient(135deg, #FBBF24, #D97706); }
+    .status-merah { background: linear-gradient(135deg, #EF4444, #DC2626); }
+  </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+
+  <div class="max-w-md mx-auto bg-white min-h-screen shadow-xl flex flex-col justify-between">
+    <header class="p-6 bg-slate-900 text-white rounded-b-3xl shadow-lg">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <p class="text-xs text-slate-400 font-medium">Selamat Datang</p>
+          <h1 class="text-xl font-bold tracking-tight">Dompet Digital Anda</h1>
+        </div>
+        <button onclick="tetapkanReset()" class="text-xs bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 py-1.5 rounded-full transition font-semibold">
+          <i class="fa-solid fa-rotate-right mr-1"></i> Reset
+        </button>
+      </div>
+      
+      <div id="kadStatus" class="status-hijau p-5 rounded-2xl text-white transition-all duration-500 shadow-md">
+        <p class="text-xs opacity-85 font-medium">Baki Bulanan Keseluruhan (Termasuk Bawa Hadapan)</p>
+        <h2 id="txtBakiBulanan" class="text-3xl font-black my-1">RM 0.00</h2>
+        <div class="flex justify-between text-xs mt-3 opacity-90 border-t border-white/20 pt-2">
+          <span>Hari Ini: <strong id="txtHariIni">RM 0.00</strong></span>
+          <span>Bulan Ini: <strong id="txtBulanIni">RM 0.00</strong></span>
+        </div>
+      </div>
+    </header>
+
+    <main class="p-6 flex-grow space-y-6 overflow-y-auto">
+      
+      <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+        <h3 class="text-sm font-bold text-slate-700"><i class="fa-solid fa-plus-circle text-emerald-500 mr-1"></i> Rekod Belanja Baharu</h3>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="inpNama" placeholder="Nama (cth: Sarapan)" class="col-span-2 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+          <input type="number" id="inpJumlah" placeholder="Jumlah RM" class="p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+          <select id="selKategori" class="p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
+            </select>
+        </div>
+        <button onclick="tambahBelanja()" class="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold hover:bg-slate-800 transition text-sm">
+          Masukkan Perbelanjaan
+        </button>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-sm font-bold text-slate-700"><i class="fa-solid fa-tags text-blue-500 mr-1"></i> Had Kategori</h3>
+          <button onclick="bukaUrusKategori()" class="text-xs text-blue-600 font-semibold">+ Cipta Kategori</button>
+        </div>
+        <div id="senaraiKategoriStatus" class="space-y-3 mt-3">
+          </div>
+      </div>
+
+      <div class="space-y-3">
+        <h3 class="text-sm font-bold text-slate-700"><i class="fa-solid fa-history text-slate-500 mr-1"></i> Aliran Tunai Bulan Ini</h3>
+        <div id="senaraiTransaksi" class="space-y-2">
+          </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // MASUKKAN URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
+    const API_URL = "URL_WEB_APP_ANDA_DI_SINI"; 
+
+    let dataSistem = {};
+
+    async function muatData() {
+      Swal.fire({ title: 'Memuatkan data...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+      const respon = await fetch(API_URL);
+      dataSistem = await respon.json();
+      Swal.close();
+      kemaskiniUI();
+    }
+
+    function kemaskiniUI() {
+      // 3. Jumlah semasa hari itu dan bulanan
+      document.getElementById('txtHariIni').innerText = `RM ${dataSistem.jumlahHariIni.toFixed(2)}`;
+      document.getElementById('txtBulanIni').innerText = `RM ${dataSistem.jumlahBulanIni.toFixed(2)}`;
+      document.getElementById('txtBakiBulanan').innerText = `RM ${dataSistem.bakiBulanan.toFixed(2)}`;
+
+      // 8. Logik Warna Grafik Dinamik (Hijau / Kuning-Oren / Merah)
+      const kad = document.getElementById('kadStatus');
+      kad.className = "p-5 rounded-2xl text-white transition-all duration-500 shadow-md";
+      if (dataSistem.bakiBulanan < 0) {
+        kad.classList.add('status-merah'); // Melebihi had
+      } else if (dataSistem.bakiBulanan < 150) { 
+        kad.classList.add('status-kuning'); // Amaran / Boros
+      } else {
+        kad.classList.add('status-hijau'); // Cermat
+      }
+
+      // Kemaskini dropdown kategori
+      const select = document.getElementById('selKategori');
+      select.innerHTML = '';
+      
+      // Paparan Had Kategori
+      const katContainer = document.getElementById('senaraiKategoriStatus');
+      katContainer.innerHTML = '';
+
+      Object.keys(dataSistem.kategori).forEach(key => {
+        const kat = dataSistem.kategori[key];
+        select.innerHTML += `<option value="${key}">${key}</option>`;
+        
+        const peratusGuna = kat.hadBulanan > 0 ? (kat.gunaBulanan / kat.hadBulanan) * 100 : 0;
+        let warnaBar = 'bg-emerald-500';
+        if (peratusGuna >= 100) warnaBar = 'bg-red-500';
+        else if (peratusGuna > 75) warnaBar = 'bg-amber-500';
+
+        katContainer.innerHTML += `
+          <div class="text-xs border-b border-slate-100 pb-2">
+            <div class="flex justify-between font-medium text-slate-600 mb-1">
+              <span>${key} <span class="text-slate-400">(Had: RM${kat.hadBulanan})</span></span>
+              <span class="font-bold text-slate-700">RM ${kat.gunaBulanan.toFixed(2)}</span>
+            </div>
+            <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div class="${warnaBar} h-full" style="width: ${Math.min(peratusGuna, 100)}%"></div>
+            </div>
+            <div class="flex justify-between items-center mt-1">
+              <span class="text-[10px] text-slate-400">Hari ini: RM ${kat.gunaHarian.toFixed(2)} / Had: RM ${kat.hadHarian}</span>
+              <button onclick="padamKategori('${key}')" class="text-[10px] text-red-500 hover:underline font-medium"><i class="fa-regular fa-trash-can"></i> Padam</button>
+            </div>
+          </div>
+        `;
+      });
+
+      // 2. Nama perbelanjaan kekal hingga dipadamkan
+      const transContainer = document.getElementById('senaraiTransaksi');
+      transContainer.innerHTML = '';
+      dataSistem.transaksi.forEach(t => {
+        transContainer.innerHTML += `
+          <div class="flex justify-between items-center p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
+            <div>
+              <p class="font-bold text-slate-800">${t.nama}</p>
+              <p class="text-[10px] text-slate-400">${t.kategori} • ${new Date(t.tarikh).toLocaleDateString('ms-MY')}</p>
+            </div>
+            <div class="flex items-center space-x-3">
+              <span class="font-bold text-slate-900">RM ${t.jumlah.toFixed(2)}</span>
+              <button onclick="padamTransaksi('${t.id}')" class="text-slate-400 hover:text-red-500 transition">
+                <i class="fa-solid fa-circle-xmark text-sm"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // 1. Masukkan nama perbelanjaan & 7. Amaran had perbelanjaan
+    async function tambahBelanja() {
+      const nama = document.getElementById('inpNama').value;
+      const jumlah = parseFloat(document.getElementById('inpJumlah').value);
+      const kategori = document.getElementById('selKategori').value;
+
+      if (!nama || !jumlah || !kategori) {
+        Swal.fire('Ralat', 'Sila lengkapkan semua ruangan!', 'error');
+        return;
+      }
+
+      // Semakan amaran had sebelum menghantar data
+      const katDipilih = dataSistem.kategori[kategori];
+      if (katDipilih) {
+        const ramalanHarian = katDipilih.gunaHarian + jumlah;
+        const ramalanBulanan = katDipilih.gunaBulanan + jumlah;
+        
+        if (ramalanHarian > katDipilih.hadHarian || ramalanBulanan > katDipilih.hadBulanan) {
+          const sah = await Swal.fire({
+            title: 'Amaran Had Melebihi!',
+            text: `Kategori ${kategori} akan melebihi had yang ditetapkan jika transaksi diteruskan. Anda pasti?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Teruskan',
+            cancelButtonText: 'Batal'
+          });
+          if (!sah.isConfirmed) return;
+        }
+      }
+
+      await hantarData({ tindakan: "tambahBelanja", nama, jumlah, kategori });
+      document.getElementById('inpNama').value = '';
+      document.getElementById('inpJumlah').value = '';
+      muatData();
+    }
+
+    async function padamTransaksi(id) {
+      const sah = await Swal.fire({ title: 'Padam rekod?', text: "Tindakan ini tidak boleh diundur.", icon: 'warning', showCancelButton: true });
+      if (sah.isConfirmed) {
+        await hantarData({ tindakan: "padamBelanja", id });
+        muatData();
+      }
+    }
+
+    // 4. Cipta & Delete Kategori
+    async function bukaUrusKategori() {
+      const { value: formValues } = await Swal.fire({
+        title: 'Cipta Kategori Baru',
+        html:
+          '<input id="swal-input1" class="swal2-input placeholder-sm text-sm" placeholder="Nama Kategori (cth: Makanan)">' +
+          '<input type="number" id="swal-input2" class="swal2-input text-sm" placeholder="Had Harian (RM)">' +
+          '<input type="number" id="swal-input3" class="swal2-input text-sm" placeholder="Had Bulanan (RM)">',
+        focusConfirm: false,
+        preConfirm: () => {
+          return [
+            document.getElementById('swal-input1').value,
+            document.getElementById('swal-input2').value,
+            document.getElementById('swal-input3').value
+          ]
+        }
+      });
+
+      if (formValues && formValues[0]) {
+        await hantarData({ tindakan: "tambahKategori", nama: formValues[0], hadHarian: parseFloat(formValues[1]||0), hadBulanan: parseFloat(formValues[2]||0) });
+        muatData();
+      }
+    }
+
+    async function padamKategori(nama) {
+      const sah = await Swal.fire({ title: `Padam kategori ${nama}?`, text: "Had perbelanjaan kategori ini akan dikeluarkan.", icon: 'warning', showCancelButton: true });
+      if (sah.isConfirmed) {
+        await hantarData({ tindakan: "padamKategori", nama });
+        muatData();
+      }
+    }
+
+    // 5 & 6. Logik Butang Reset & Bawa Hadapan
+    async function tetapkanReset() {
+      const sah = await Swal.fire({
+        title: 'Adakah anda pasti?',
+        text: "Sistem akan membersihkan transaksi bulan ini. Baki semasa akan secara automatik dibawa ke hadapan bagi bulan baru!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Ya, Reset Bulan Baru'
+      });
+
+      if (sah.isConfirmed) {
+        Swal.fire({ title: 'Memproses penutupan akaun...', didOpen: () => Swal.showLoading() });
+        const respon = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ tindakan: "resetSistem" })
+        });
+        const hasil = await respon.json();
+        Swal.fire('Selesai!', `Sistem berjaya direset. Baki dibawa ke hadapan: RM ${hasil.bakiBaru.toFixed(2)}`, 'success');
+        muatData();
+      }
+    }
+
+    async function hantarData(data) {
+      Swal.fire({ title: 'Menghantar...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+      await fetch(API_URL, { method: 'POST', body: JSON.stringify(data) });
+    }
+
+    // Cetus muat data kali pertama
+    window.onload = muatData;
+  </script>
+</body>
+</html>
