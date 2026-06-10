@@ -142,7 +142,10 @@
             </div>
             <div class="flex justify-between items-center mt-1">
               <span class="text-[10px] text-slate-400">Hari ini: RM ${kat.gunaHarian.toFixed(2)} / Had: RM ${kat.hadHarian}</span>
-              <button onclick="padamKategori('${key}')" class="text-[10px] text-red-500 hover:underline font-medium"><i class="fa-regular fa-trash-can"></i> Padam</button>
+              <div class="space-x-3">
+                <button onclick="editKategori('${key}', ${kat.hadHarian}, ${kat.hadBulanan})" class="text-[10px] text-blue-500 hover:underline font-medium"><i class="fa-regular fa-pen-to-square"></i> Edit</button>
+                <button onclick="padamKategori('${key}')" class="text-[10px] text-red-500 hover:underline font-medium"><i class="fa-regular fa-trash-can"></i> Padam</button>
+              </div>
             </div>
           </div>
         `;
@@ -237,6 +240,41 @@
       }
     }
 
+    async function editKategori(namaAsal, hadHarianAsal, hadBulananAsal) {
+      const { value: formValues } = await Swal.fire({
+        title: 'Kemaskini Kategori',
+        html:
+          `<div class="text-left text-xs mb-1 text-slate-500 font-bold">Nama Kategori</div>` +
+          `<input id="swal-edit1" class="swal2-input placeholder-sm text-sm mt-0 mb-3" value="${namaAsal}" placeholder="Nama Kategori">` +
+          `<div class="text-left text-xs mb-1 text-slate-500 font-bold">Had Harian (RM)</div>` +
+          `<input type="number" id="swal-edit2" class="swal2-input text-sm mt-0 mb-3" value="${hadHarianAsal}" placeholder="Had Harian (RM)">` +
+          `<div class="text-left text-xs mb-1 text-slate-500 font-bold">Had Bulanan (RM)</div>` +
+          `<input type="number" id="swal-edit3" class="swal2-input text-sm mt-0" value="${hadBulananAsal}" placeholder="Had Bulanan (RM)">`,
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Simpan Perubahan',
+        cancelButtonText: 'Batal',
+        preConfirm: () => {
+          return [
+            document.getElementById('swal-edit1').value,
+            document.getElementById('swal-edit2').value,
+            document.getElementById('swal-edit3').value
+          ]
+        }
+      });
+
+      if (formValues && formValues[0]) {
+        await hantarData({ 
+          tindakan: "kemaskiniKategori", 
+          namaAsal: namaAsal, 
+          namaBaru: formValues[0], 
+          hadHarian: parseFloat(formValues[1]||0), 
+          hadBulanan: parseFloat(formValues[2]||0) 
+        });
+        muatData();
+      }
+    }
+    
     async function padamKategori(nama) {
       const sah = await Swal.fire({ title: `Padam kategori ${nama}?`, text: "Had perbelanjaan kategori ini akan dikeluarkan.", icon: 'warning', showCancelButton: true });
       if (sah.isConfirmed) {
