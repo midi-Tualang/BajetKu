@@ -76,11 +76,25 @@
     let dataSistem = {};
 
     async function muatData() {
-      Swal.fire({ title: 'Memuatkan data...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
-      const respon = await fetch(API_URL);
-      dataSistem = await respon.json();
-      Swal.close();
-      kemaskiniUI();
+      try {
+        Swal.fire({ title: 'Memuatkan data...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+        
+        const respon = await fetch(API_URL);
+        
+        // Semak jika Google Apps Script kembalikan ralat HTML dan bukannya JSON
+        const textRespon = await respon.text();
+        try {
+          dataSistem = JSON.parse(textRespon);
+        } catch (e) {
+          throw new Error("Google Apps Script memulangkan ralat. Pastikan nama Tab Helaian betul atau semak tetapan kebenaran (Access).");
+        }
+
+        Swal.close();
+        kemaskiniUI();
+      } catch (error) {
+        Swal.fire('Ralat Sistem', error.message, 'error');
+        console.error("Butiran Ralat:", error);
+      }
     }
 
     function kemaskiniUI() {
