@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <style>
     .status-hijau { background: linear-gradient(135deg, #10B981, #059669); }
     .status-kuning { background: linear-gradient(135deg, #FBBF24, #D97706); }
@@ -22,9 +23,14 @@
           <p class="text-xs text-slate-400 font-medium">Selamat Datang</p>
           <h1 class="text-xl font-bold tracking-tight">Dompet Digital Anda</h1>
         </div>
-        <button onclick="tetapkanReset()" class="text-xs bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 py-1.5 rounded-full transition font-semibold">
-          <i class="fa-solid fa-rotate-right mr-1"></i> Reset
-        </button>
+        <div class="flex items-center space-x-2">
+          <button onclick="muatTurunPDF()" class="text-xs bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 px-3 py-1.5 rounded-full transition font-semibold">
+            <i class="fa-solid fa-file-pdf mr-1"></i> Laporan
+          </button>
+          <button onclick="tetapkanReset()" class="text-xs bg-red-600/20 hover:bg-red-600/40 text-red-400 px-3 py-1.5 rounded-full transition font-semibold">
+            <i class="fa-solid fa-rotate-right mr-1"></i> Reset
+          </button>
+        </div>
       </div>
       
       <div id="kadStatus" class="status-hijau p-5 rounded-2xl text-white transition-all duration-500 shadow-md">
@@ -70,7 +76,6 @@
   </div>
 
   <script>
-    // MASUKKAN URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI
     const API_URL = "https://script.google.com/macros/s/AKfycbz81lfqBJWG7Yh0S5kLcPIEDCrDOthsdCsIHDdX59eawskcq1qpiS6TWzXnd0LBC5g/exec"; 
 
     let dataSistem = {};
@@ -78,17 +83,13 @@
     async function muatData() {
       try {
         Swal.fire({ title: 'Memuatkan data...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
-        
         const respon = await fetch(API_URL);
-        
-        // Semak jika Google Apps Script kembalikan ralat HTML dan bukannya JSON
         const textRespon = await respon.text();
         try {
           dataSistem = JSON.parse(textRespon);
         } catch (e) {
           throw new Error("Google Apps Script memulangkan ralat. Pastikan nama Tab Helaian betul atau semak tetapan kebenaran (Access).");
         }
-
         Swal.close();
         kemaskiniUI();
       } catch (error) {
@@ -98,45 +99,36 @@
     }
 
     function kemaskiniUI() {
-      // 3. Jumlah semasa hari itu dan bulanan
       document.getElementById('txtHariIni').innerText = `RM ${dataSistem.jumlahHariIni.toFixed(2)}`;
       document.getElementById('txtBulanIni').innerText = `RM ${dataSistem.jumlahBulanIni.toFixed(2)}`;
       document.getElementById('txtBakiBulanan').innerText = `RM ${dataSistem.bakiBulanan.toFixed(2)}`;
 
-      // 8. Logik Warna Grafik Dinamik (Hijau / Kuning-Oren / Merah)
       const kad = document.getElementById('kadStatus');
       kad.className = "p-5 rounded-2xl text-white transition-all duration-500 shadow-md";
       if (dataSistem.bakiBulanan < 0) {
-        kad.classList.add('status-merah'); // Melebihi had
+        kad.classList.add('status-merah');
       } else if (dataSistem.bakiBulanan < 150) { 
-        kad.classList.add('status-kuning'); // Amaran / Boros
+        kad.classList.add('status-kuning');
       } else {
-        kad.classList.add('status-hijau'); // Cermat
+        kad.classList.add('status-hijau');
       }
 
-      // Kemaskini dropdown kategori
       const select = document.getElementById('selKategori');
       select.innerHTML = '';
-      
-      // Paparan Had Kategori
       const katContainer = document.getElementById('senaraiKategoriStatus');
       katContainer.innerHTML = '';
 
       Object.keys(dataSistem.kategori).forEach(key => {
         const kat = dataSistem.kategori[key];
-        
-        // --- KIRAAN BAKI BAHARU ---
         const bakiKategori = kat.hadBulanan - kat.gunaBulanan;
         let teksBakiDropdown = '';
         let teksBakiKad = '';
         
         if (kat.hadBulanan > 0) {
-          // Jika ada lebihan baki
           if (bakiKategori >= 0) {
             teksBakiDropdown = ` (Baki: RM ${bakiKategori.toFixed(2)})`;
             teksBakiKad = `<span class="text-emerald-500 ml-1 font-bold">Baki: RM ${bakiKategori.toFixed(2)}</span>`;
           } else {
-            // Jika melebihi had (baki negatif)
             teksBakiDropdown = ` (TERLEBIH: -RM ${Math.abs(bakiKategori).toFixed(2)})`;
             teksBakiKad = `<span class="text-red-500 ml-1 font-bold">Terlebih: -RM ${Math.abs(bakiKategori).toFixed(2)}</span>`;
           }
@@ -145,7 +137,6 @@
            teksBakiKad = `<span class="text-slate-400 ml-1">(Tiada Had)</span>`;
         }
 
-        // Kemaskini Dropdown supaya memaparkan baki
         select.innerHTML += `<option value="${key}">${key}${teksBakiDropdown}</option>`;
         
         const peratusGuna = kat.hadBulanan > 0 ? (kat.gunaBulanan / kat.hadBulanan) * 100 : 0;
@@ -153,7 +144,6 @@
         if (peratusGuna >= 100) warnaBar = 'bg-red-500';
         else if (peratusGuna > 75) warnaBar = 'bg-amber-500';
 
-        // Kemaskini Kad Kategori dengan info Baki
         katContainer.innerHTML += `
           <div class="text-xs border-b border-slate-100 pb-2">
             <div class="flex justify-between font-medium text-slate-600 mb-1">
@@ -174,7 +164,6 @@
         `;
       });
 
-      // 2. Nama perbelanjaan kekal hingga dipadamkan
       const transContainer = document.getElementById('senaraiTransaksi');
       transContainer.innerHTML = '';
       dataSistem.transaksi.forEach(t => {
@@ -195,7 +184,6 @@
       });
     }
 
-    // 1. Masukkan nama perbelanjaan & 7. Amaran had perbelanjaan
     async function tambahBelanja() {
       const nama = document.getElementById('inpNama').value;
       const jumlah = parseFloat(document.getElementById('inpJumlah').value);
@@ -206,7 +194,6 @@
         return;
       }
 
-      // Semakan amaran had sebelum menghantar data
       const katDipilih = dataSistem.kategori[kategori];
       if (katDipilih) {
         const ramalanHarian = katDipilih.gunaHarian + jumlah;
@@ -239,7 +226,6 @@
       }
     }
 
-    // 4. Cipta & Delete Kategori
     async function bukaUrusKategori() {
       const { value: formValues } = await Swal.fire({
         title: 'Cipta Kategori Baru',
@@ -306,7 +292,6 @@
       }
     }
 
-    // 5 & 6. Logik Butang Reset & Bawa Hadapan
     async function tetapkanReset() {
       const sah = await Swal.fire({
         title: 'Adakah anda pasti?',
@@ -334,7 +319,149 @@
       await fetch(API_URL, { method: 'POST', body: JSON.stringify(data) });
     }
 
-    // Cetus muat data kali pertama
+    // --- FUNGSI PAKAR: REKA BENTUK & CETAKAN LAPORAN PDF ---
+    function muatTurunPDF() {
+      if (!dataSistem.kategori || Object.keys(dataSistem.kategori).length === 0) {
+        Swal.fire('Ralat', 'Tiada data untuk dijana sebagai laporan.', 'warning');
+        return;
+      }
+
+      const tarikhSemasa = new Date();
+      const bulanTahun = tarikhSemasa.toLocaleDateString('ms-MY', { month: 'long', year: 'numeric' });
+      
+      // Membina layout penyata akaun korporat premium (A4)
+      const elemenLaporan = document.createElement('div');
+      elemenLaporan.style.padding = '20mm 15mm';
+      elemenLaporan.style.backgroundColor = '#ffffff';
+      elemenLaporan.style.fontFamily = 'Arial, sans-serif';
+      elemenLaporan.style.color = '#1e293b';
+      
+      let htmlKandungan = `
+        <div style="border-bottom: 3px solid #0f172a; padding-bottom: 16px; margin-bottom: 25px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td>
+                <h1 style="font-size: 24px; font-weight: 900; color: #0f172a; margin: 0; letter-spacing: -0.5px;">URUSDUIT</h1>
+                <p style="font-size: 11px; color: #64748b; margin: 4px 0 0 0; font-weight: bold; text-transform: uppercase;">Sistem Penjejak Kewangan Peribadi</p>
+              </td>
+              <td style="text-align: right; vertical-align: bottom;">
+                <h2 style="font-size: 14px; font-weight: bold; color: #0f172a; margin: 0;">PENYATA BULANAN</h2>
+                <p style="font-size: 12px; color: #475569; margin: 2px 0 0 0; font-weight: bold;">Sesi: ${bulanTahun}</p>
+              </td>
+            </tr>
+          </table>
+        </div>
+        
+        <p style="font-size: 10px; color: #94a3b8; margin-bottom: 20px;">Tarikh Cetakan: ${new Date().toLocaleString('ms-MY')}</p>
+
+        <h3 style="font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">1. Ringkasan Aliran Tunai</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 12px;">
+          <tr>
+            <td style="width: 33%; padding: 15px; background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px 0 0 6px;">
+              <span style="font-size: 9px; color: #64748b; font-weight: bold; display: block; margin-bottom: 5px;">BAKI BAWA KE HADAPAN</span>
+              <strong style="font-size: 16px; color: #0f172a;">RM ${parseFloat(dataSistem.bakiBawaHadapan || 0).toFixed(2)}</strong>
+            </td>
+            <td style="width: 33%; padding: 15px; background-color: #f8fafc; border-y: 1px solid #e2e8f0; border-r: 1px solid #e2e8f0;">
+              <span style="font-size: 9px; color: #64748b; font-weight: bold; display: block; margin-bottom: 5px;">TOTAL BELANJA BULAN INI</span>
+              <strong style="font-size: 16px; color: #334155;">RM ${dataSistem.jumlahBulanIni.toFixed(2)}</strong>
+            </td>
+            <td style="width: 33%; padding: 15px; background-color: #f8fafc; border-y: 1px solid #e2e8f0; border-r: 1px solid #e2e8f0; border-radius: 0 6px 6px 0;">
+              <span style="font-size: 9px; color: #64748b; font-weight: bold; display: block; margin-bottom: 5px;">BAKI BERSIH SEMASA</span>
+              <strong style="font-size: 16px; color: ${dataSistem.bakiBulanan >= 0 ? '#059669' : '#dc2626'};">RM ${dataSistem.bakiBulanan.toFixed(2)}</strong>
+            </td>
+          </tr>
+        </table>
+
+        <h3 style="font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">2. Analisis Belanja Mengikut Kategori</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px; font-size: 11px; border: 1px solid #e2e8f0;">
+          <thead>
+            <tr style="background-color: #0f172a; color: #ffffff; text-align: left;">
+              <th style="padding: 10px; font-weight: bold;">Kategori</th>
+              <th style="padding: 10px; font-weight: bold; text-align: right;">Had Peruntukan</th>
+              <th style="padding: 10px; font-weight: bold; text-align: right;">Jumlah Digunakan</th>
+              <th style="padding: 10px; font-weight: bold; text-align: right;">Baki Sedia Ada</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      Object.keys(dataSistem.kategori).forEach(key => {
+        const kat = dataSistem.kategori[key];
+        const baki = kat.hadBulanan - kat.gunaBulanan;
+        htmlKandungan += `
+          <tr style="border-bottom: 1px solid #e2e8f0;">
+            <td style="padding: 10px; font-weight: bold; color: #1e293b;">${key}</td>
+            <td style="padding: 10px; text-align: right; color: #475569;">RM ${kat.hadBulanan.toFixed(2)}</td>
+            <td style="padding: 10px; text-align: right; color: #1e293b;">RM ${kat.gunaBulanan.toFixed(2)}</td>
+            <td style="padding: 10px; text-align: right; font-weight: bold; color: ${baki >= 0 ? '#059669' : '#dc2626'}">
+              ${baki >= 0 ? 'RM ' + baki.toFixed(2) : '-RM ' + Math.abs(baki).toFixed(2)}
+            </td>
+          </tr>
+        `;
+      });
+      
+      htmlKandungan += `
+          </tbody>
+        </table>
+
+        <h3 style="font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px;">3. Log Transaksi Terperinci</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 10px; border: 1px solid #e2e8f0;">
+          <thead>
+            <tr style="background-color: #f1f5f9; color: #0f172a; text-align: left; border-bottom: 2px solid #cbd5e1;">
+              <th style="padding: 8px; font-weight: bold;">Tarikh</th>
+              <th style="padding: 8px; font-weight: bold;">Perkara / Item</th>
+              <th style="padding: 8px; font-weight: bold;">Kategori</th>
+              <th style="padding: 8px; font-weight: bold; text-align: right;">Amaun (RM)</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      
+      if (dataSistem.transaksi.length === 0) {
+        htmlKandungan += `<tr><td colspan="4" style="padding: 15px; text-align: center; color: #94a3b8; font-style: italic;">Tiada rekod transaksi dijumpai untuk sesi ini.</td></tr>`;
+      } else {
+        dataSistem.transaksi.forEach(t => {
+          htmlKandungan += `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 8px; color: #64748b;">${new Date(t.tarikh).toLocaleDateString('ms-MY')}</td>
+              <td style="padding: 8px; font-weight: bold; color: #0f172a;">${t.nama}</td>
+              <td style="padding: 8px; color: #475569;">${t.kategori}</td>
+              <td style="padding: 8px; text-align: right; font-weight: bold; color: #0f172a;">RM ${t.jumlah.toFixed(2)}</td>
+            </tr>
+          `;
+        });
+      }
+      
+      htmlKandungan += `
+          </tbody>
+        </table>
+
+        <div style="margin-top: 50px; text-align: center; font-size: 9px; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 15px;">
+          * Penyata ini disah milik dan dijana secara digital dari fail storan awan Google Drive anda. Selesai *
+        </div>
+      `;
+      
+      elemenLaporan.innerHTML = htmlKandungan;
+      
+      // Konfigurasi Kualiti Cetakan PDF Pakar
+      const pilihanSistem = {
+        margin:       10,
+        filename:     `Laporan_Kewangan_UrusDuit_${tarikhSemasa.getMonth()+1}_${tarikhSemasa.getFullYear()}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      
+      Swal.fire({ title: 'Menjana dokumen PDF...', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+      
+      // Melaksanakan proses eksport muat turun fail PDF
+      html2pdf().from(elemenLaporan).set(pilihanSistem).save().then(() => {
+        Swal.fire('Berjaya!', 'Penyata kewangan bulanan PDF anda telah sedia dan dimuat turun.', 'success');
+      }).catch(ralat => {
+        Swal.fire('Ralat Muat Turun', 'Gagal membina fail PDF: ' + ralat.message, 'error');
+      });
+    }
+
     window.onload = muatData;
   </script>
 </body>
