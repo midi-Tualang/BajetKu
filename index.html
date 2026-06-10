@@ -48,6 +48,7 @@
       <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
         <h3 class="text-sm font-bold text-slate-700"><i class="fa-solid fa-plus-circle text-emerald-500 mr-1"></i> Rekod Belanja Baharu</h3>
         <div class="grid grid-cols-2 gap-2">
+          <input type="date" id="inpTarikh" class="col-span-2 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
           <input type="text" id="inpNama" placeholder="Nama (cth: Sarapan)" class="col-span-2 p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
           <input type="number" id="inpJumlah" placeholder="Jumlah RM" class="p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
           <select id="selKategori" class="p-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-slate-900">
@@ -99,6 +100,7 @@
     }
 
     function kemaskiniUI() {
+      document.getElementById('inpTarikh').value = new Date().toISOString().split('T')[0];
       document.getElementById('txtHariIni').innerText = `RM ${dataSistem.jumlahHariIni.toFixed(2)}`;
       document.getElementById('txtBulanIni').innerText = `RM ${dataSistem.jumlahBulanIni.toFixed(2)}`;
       document.getElementById('txtBakiBulanan').innerText = `RM ${dataSistem.bakiBulanan.toFixed(2)}`;
@@ -185,11 +187,12 @@
     }
 
     async function tambahBelanja() {
+      const tarikh = document.getElementById('inpTarikh').value;
       const nama = document.getElementById('inpNama').value;
       const jumlah = parseFloat(document.getElementById('inpJumlah').value);
       const kategori = document.getElementById('selKategori').value;
 
-      if (!nama || !jumlah || !kategori) {
+      if (!tarikh || !nama || !jumlah || !kategori) {
         Swal.fire('Ralat', 'Sila lengkapkan semua ruangan!', 'error');
         return;
       }
@@ -212,9 +215,10 @@
         }
       }
 
-      await hantarData({ tindakan: "tambahBelanja", nama, jumlah, kategori });
+      await hantarData({ tindakan: "tambahBelanja", tarikh, nama, jumlah, kategori });
       document.getElementById('inpNama').value = '';
       document.getElementById('inpJumlah').value = '';
+      // Tarikh tidak direset supaya mudah jika mahu tambah banyak resit untuk hari yang sama
       muatData();
     }
 
