@@ -124,18 +124,41 @@
 
       Object.keys(dataSistem.kategori).forEach(key => {
         const kat = dataSistem.kategori[key];
-        select.innerHTML += `<option value="${key}">${key}</option>`;
+        
+        // --- KIRAAN BAKI BAHARU ---
+        const bakiKategori = kat.hadBulanan - kat.gunaBulanan;
+        let teksBakiDropdown = '';
+        let teksBakiKad = '';
+        
+        if (kat.hadBulanan > 0) {
+          // Jika ada lebihan baki
+          if (bakiKategori >= 0) {
+            teksBakiDropdown = ` (Baki: RM ${bakiKategori.toFixed(2)})`;
+            teksBakiKad = `<span class="text-emerald-500 ml-1 font-bold">Baki: RM ${bakiKategori.toFixed(2)}</span>`;
+          } else {
+            // Jika melebihi had (baki negatif)
+            teksBakiDropdown = ` (TERLEBIH: -RM ${Math.abs(bakiKategori).toFixed(2)})`;
+            teksBakiKad = `<span class="text-red-500 ml-1 font-bold">Terlebih: -RM ${Math.abs(bakiKategori).toFixed(2)}</span>`;
+          }
+        } else {
+           teksBakiDropdown = ` (Tiada Had)`;
+           teksBakiKad = `<span class="text-slate-400 ml-1">(Tiada Had)</span>`;
+        }
+
+        // Kemaskini Dropdown supaya memaparkan baki
+        select.innerHTML += `<option value="${key}">${key}${teksBakiDropdown}</option>`;
         
         const peratusGuna = kat.hadBulanan > 0 ? (kat.gunaBulanan / kat.hadBulanan) * 100 : 0;
         let warnaBar = 'bg-emerald-500';
         if (peratusGuna >= 100) warnaBar = 'bg-red-500';
         else if (peratusGuna > 75) warnaBar = 'bg-amber-500';
 
+        // Kemaskini Kad Kategori dengan info Baki
         katContainer.innerHTML += `
           <div class="text-xs border-b border-slate-100 pb-2">
             <div class="flex justify-between font-medium text-slate-600 mb-1">
-              <span>${key} <span class="text-slate-400">(Had: RM${kat.hadBulanan})</span></span>
-              <span class="font-bold text-slate-700">RM ${kat.gunaBulanan.toFixed(2)}</span>
+              <span>${key} ${teksBakiKad} <span class="text-slate-400 font-normal"> / Had: RM${kat.hadBulanan}</span></span>
+              <span class="font-bold text-slate-700">Guna: RM ${kat.gunaBulanan.toFixed(2)}</span>
             </div>
             <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
               <div class="${warnaBar} h-full" style="width: ${Math.min(peratusGuna, 100)}%"></div>
